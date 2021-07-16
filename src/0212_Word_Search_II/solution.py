@@ -1,3 +1,4 @@
+import collections
 from typing import List, Tuple
 
 UP = (-1, 0)
@@ -50,15 +51,31 @@ class Solution:
     """
     WIP. Does not pass.
     """
+
     def findWords(self, board: List[List[str]], words: List[str]) -> List[str]:
         m = len(board)
         n = len(board[0])
 
         out_of_bounds = lambda row, col: row < 0 or row >= m or col < 0 or col >= n
 
+        letter_pos = collections.defaultdict(set)
+        for row in range(m):
+            for col in range(n):
+                c = board[row][col]
+                letter_pos[c].add((row, col))
+
+        history = History()
+        for word in words:
+            history.add(word)
+
         def search_word(pos: Tuple, prefix: str, suffix: str, visited: set) -> bool:
-	    nonlocal letter_pos
-            assert board[pos[0]][pos[1]] == suffix[0]
+            if suffix == "":
+                return True
+
+            print(f"At:{pos}, prefix:{prefix}, suffix:{suffix}, visited:{visited}")
+            nonlocal letter_pos, history
+            row, col = pos
+            assert board[row][col] == prefix[-1]
 
             if pos in visited:
                 history.set_found_state(prefix, False)
@@ -71,9 +88,13 @@ class Solution:
 
                 if (
                     out_of_bounds(new_row, new_col)
-                    or board[new_row][new_col] not in letter_pos[next_letter]
+                    or (new_row, new_col) not in letter_pos[next_letter]
                     or not history.is_prefix(prefix + next_letter)
                 ):
+                    print(
+                        f"newpos:({new_row},{new_col}), {board[new_row][new_col] if not out_of_bounds(new_row, new_col) else None} ,{history.is_prefix(prefix + next_letter)}-{prefix+next_letter}, {letter_pos[next_letter] if next_letter in letter_pos else None}"
+                    )
+
                     continue
 
                 if history.did_exist(prefix + next_letter) or search_word(
@@ -86,17 +107,11 @@ class Solution:
             history.set_found_state(prefix, False)
             return False
 
-        letter_pos = collections.defaultdict(set)
-        for row in range(m):
-            for col in range(n):
-                c = board[row][col]
-                letter_pos[c].add((row, col))
-
-        history = History()
         valid_words = []
         for word in words:
             for start_pos in letter_pos[word[0]]:
-                if search_word(start_pos, "", word, set()):
+                if search_word(start_pos, word[0], word[1:], set()):
                     valid_words.append(word)
+                    break
 
         return valid_words
